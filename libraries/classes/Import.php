@@ -100,9 +100,9 @@ class Import
 
         $result = $GLOBALS['dbi']->tryQuery($sql);
 
-        // USE query changes the database, son need to track
+        // USE query changes the database, so need to track
         // while running multiple queries
-        $is_use_query = mb_stripos($sql, "use ") !== false;
+        $is_use_query = strtolower(mb_substr($sql, 0, 4)) == "use ";
 
         $msg = '# ';
         if ($result === false) { // execution failed
