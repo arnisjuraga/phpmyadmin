@@ -127,7 +127,7 @@ class Node
             $this->type = Node::CONTAINER;
         }
         $this->is_group = (bool)$is_group;
-        $this->relation = new Relation();
+        $this->relation = new Relation($GLOBALS['dbi']);
     }
 
     /**
@@ -208,7 +208,7 @@ class Node
             $parents[] = $this;
         }
         $parent = $this->parent;
-        while (isset($parent)) {
+        while (! is_null($parent)) {
             if (($parent->type != Node::CONTAINER || $containers)
                 && (!$parent->is_group || $groups)
             ) {
@@ -688,6 +688,7 @@ class Node
      */
     private function _getDatabasesToSearch($searchClause)
     {
+        $databases = [];
         if (!empty($searchClause)) {
             $databases = [
                 "%" . $GLOBALS['dbi']->escapeString($searchClause) . "%",

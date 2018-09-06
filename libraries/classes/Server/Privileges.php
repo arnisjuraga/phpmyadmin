@@ -33,6 +33,11 @@ class Privileges
     public $template;
 
     /**
+     * @var RelationCleanup
+     */
+    private $relationCleanup;
+
+    /**
      * Privileges constructor.
      *
      * @param Template $template Template instance
@@ -40,6 +45,8 @@ class Privileges
     public function __construct(Template $template)
     {
         $this->template = $template;
+        $relation = new Relation($GLOBALS['dbi']);
+        $this->relationCleanup = new RelationCleanup($GLOBALS['dbi'], $relation);
     }
 
     /**
@@ -492,7 +499,7 @@ class Privileges
         $name_for_dfn,
         $name_for_current
     ) {
-        return $this->template->render('privileges/column_privileges', [
+        return $this->template->render('server/privileges/column_privileges', [
             'columns' => $columns,
             'row' => $row,
             'name_for_select' => $name_for_select,
@@ -544,7 +551,7 @@ class Privileges
      */
     public function getHtmlToChooseUserGroup($username)
     {
-        $relation = new Relation();
+        $relation = new Relation($GLOBALS['dbi']);
         $cfgRelation = $relation->getRelationsParam();
         $groupTable = Util::backquote($cfgRelation['db'])
             . "." . Util::backquote($cfgRelation['usergroups']);
@@ -573,7 +580,7 @@ class Privileges
         }
         $GLOBALS['dbi']->freeResult($result);
 
-        return $this->template->render('privileges/choose_user_group', [
+        return $this->template->render('server/privileges/choose_user_group', [
             'all_user_groups' => $allUserGroups,
             'user_group' => $userGroup,
             'params' => ['username' => $username]
@@ -591,7 +598,7 @@ class Privileges
     public function setUserGroup($username, $userGroup)
     {
         $userGroup = is_null($userGroup) ? '' : $userGroup;
-        $relation = new Relation();
+        $relation = new Relation($GLOBALS['dbi']);
         $cfgRelation = $relation->getRelationsParam();
         if (empty($cfgRelation['db']) || empty($cfgRelation['users']) || empty($cfgRelation['usergroups'])) {
             return;
@@ -651,7 +658,8 @@ class Privileges
         if ($db == '*') {
             $table = '*';
         }
-
+        $username = '';
+        $hostname = '';
         if (isset($GLOBALS['username'])) {
             $username = $GLOBALS['username'];
             $hostname = $GLOBALS['hostname'];
@@ -845,7 +853,7 @@ class Privileges
             ],
         ];
 
-        return $this->template->render('privileges/require_options', [
+        return $this->template->render('server/privileges/require_options', [
             'require_options' => $require_options
         ]);
     }
@@ -897,7 +905,7 @@ class Privileges
             ]
         ];
 
-        $html_output = $this->template->render('privileges/resource_limits', [
+        $html_output = $this->template->render('server/privileges/resource_limits', [
             'limits' => $limits
         ]);
 
@@ -953,7 +961,7 @@ class Privileges
             $privs
         );
 
-        return $this->template->render('privileges/edit_routine_privileges', [
+        return $this->template->render('server/privileges/edit_routine_privileges', [
             'username' => $username,
             'hostname' => $hostname,
             'database' => $db,
@@ -1455,7 +1463,7 @@ class Privileges
         array $privTableNames,
         array $row
     ) {
-        return $this->template->render('privileges/global_priv_table', [
+        return $this->template->render('server/privileges/global_priv_table', [
             'priv_table' => $privTable,
             'priv_table_names' => $privTableNames,
             'row' => $row,
@@ -2376,6 +2384,8 @@ class Privileges
             $current_host = $row['Host'];
             $routine = $row['Routine_name'];
             $html_output .= '<td>';
+            $specific_db = '';
+            $specific_table = '';
             if ($GLOBALS['is_grantuser']) {
                 $specific_db = (isset($row['Db']) && $row['Db'] != '*')
                     ? $row['Db'] : '';
@@ -2941,7 +2951,7 @@ class Privileges
      */
     public function getUserGroupCount()
     {
-        $relation = new Relation();
+        $relation = new Relation($GLOBALS['dbi']);
         $cfgRelation = $relation->getRelationsParam();
         $user_group_table = Util::backquote($cfgRelation['db'])
             . '.' . Util::backquote($cfgRelation['usergroups']);
@@ -2965,7 +2975,7 @@ class Privileges
      */
     public function getUserGroupForUser($username)
     {
-        $relation = new Relation();
+        $relation = new Relation($GLOBALS['dbi']);
         $cfgRelation = $relation->getRelationsParam();
 
         if (empty($cfgRelation['db'])
@@ -3010,7 +3020,7 @@ class Privileges
         $hostname,
         $username
     ) {
-        $relation = new Relation();
+        $relation = new Relation($GLOBALS['dbi']);
         if (isset($GLOBALS['dbname'])) {
             //if (preg_match('/\\\\(?:_|%)/i', $dbname)) {
             if (preg_match('/(?<!\\\\)(?:_|%)/i', $GLOBALS['dbname'])) {
@@ -3581,7 +3591,7 @@ class Privileges
             $data['routines'] = $routines;
         }
 
-        return $this->template->render('privileges/privileges_summary', $data);
+        return $this->template->render('server/privileges/privileges_summary', $data);
     }
 
     /**
@@ -3671,8 +3681,9 @@ class Privileges
      */
     public function getHtmlTableBodyForUserRights(array $db_rights)
     {
-        $relation = new Relation();
+        $relation = new Relation($GLOBALS['dbi']);
         $cfgRelation = $relation->getRelationsParam();
+        $user_group_count = 0;
         if ($cfgRelation['menuswork']) {
             $users_table = Util::backquote($cfgRelation['db'])
                 . "." . Util::backquote($cfgRelation['users']);
@@ -3812,7 +3823,7 @@ class Privileges
     {
         $html_output = $this->getAddUserHtmlFieldset();
 
-        $html_output .= $this->template->render('privileges/delete_user_fieldset');
+        $html_output .= $this->template->render('server/privileges/delete_user_fieldset');
 
         return $html_output;
     }
@@ -3851,7 +3862,7 @@ class Privileges
 
         uksort($array_initials, "strnatcasecmp");
 
-        return $this->template->render('privileges/initials_row', [
+        return $this->template->render('server/privileges/initials_row', [
             'array_initials' => $array_initials,
             'initial' => isset($_REQUEST['initial']) ? $_REQUEST['initial'] : null,
         ]);
@@ -4047,34 +4058,33 @@ class Privileges
                 );
                 unset($_REQUEST['change_copy']);
             } else {
-                extract($row, EXTR_OVERWRITE);
                 foreach ($row as $key => $value) {
                     $GLOBALS[$key] = $value;
                 }
                 $serverVersion = $GLOBALS['dbi']->getVersion();
                 // Recent MySQL versions have the field "Password" in mysql.user,
-                // so the previous extract creates $Password but this script
+                // so the previous extract creates $row['Password'] but this script
                 // uses $password
-                if (! isset($password) && isset($Password)) {
-                    $password = $Password;
+                if (! isset($row['password']) && isset($row['Password'])) {
+                    $row['password'] = $row['Password'];
                 }
                 if (Util::getServerType() == 'MySQL'
                     && $serverVersion >= 50606
                     && $serverVersion < 50706
-                    && ((isset($authentication_string)
-                    && empty($password))
-                    || (isset($plugin)
-                    && $plugin == 'sha256_password'))
+                    && ((isset($row['authentication_string'])
+                    && empty($row['password']))
+                    || (isset($row['plugin'])
+                    && $row['plugin'] == 'sha256_password'))
                 ) {
-                    $password = $authentication_string;
+                    $row['password'] = $row['authentication_string'];
                 }
 
                 if (Util::getServerType() == 'MariaDB'
                     && $serverVersion >= 50500
-                    && isset($authentication_string)
-                    && empty($password)
+                    && isset($row['authentication_string'])
+                    && empty($row['password'])
                 ) {
-                    $password = $authentication_string;
+                    $row['password'] = $row['authentication_string'];
                 }
 
                 // Always use 'authentication_string' column
@@ -4082,11 +4092,11 @@ class Privileges
                 // the 'password' column at all
                 if (Util::getServerType() == 'MySQL'
                     && $serverVersion >= 50706
-                    && isset($authentication_string)
+                    && isset($row['authentication_string'])
                 ) {
-                    $password = $authentication_string;
+                    $row['password'] = $row['authentication_string'];
                 }
-
+                $password = $row['password'];
                 $queries = [];
             }
         }
@@ -4128,7 +4138,7 @@ class Privileges
             $queries[] = 'DROP USER \''
                 . $GLOBALS['dbi']->escapeString($this_user)
                 . '\'@\'' . $GLOBALS['dbi']->escapeString($this_host) . '\';';
-            RelationCleanup::user($this_user);
+            $this->relationCleanup->user($this_user);
 
             if (isset($_REQUEST['drop_users_db'])) {
                 $queries[] = 'DROP DATABASE IF EXISTS '
@@ -4191,19 +4201,19 @@ class Privileges
     /**
      * update Data for information: Adds a user
      *
-     * @param string $dbname      db name
-     * @param string $username    user name
-     * @param string $hostname    host name
-     * @param string $password    password
-     * @param bool   $is_menuwork is_menuwork set?
+     * @param string|null $dbname      db name
+     * @param string      $username    user name
+     * @param string      $hostname    host name
+     * @param string|null $password    password
+     * @param bool        $is_menuwork is_menuwork set?
      *
      * @return array
      */
     public function addUser(
-        $dbname,
+        ?string $dbname,
         $username,
         $hostname,
-        $password,
+        ?string $password,
         $is_menuwork
     ) {
         $_add_user_error = false;
@@ -4271,7 +4281,7 @@ class Privileges
         if (empty($_REQUEST['change_copy'])) {
             $_error = false;
 
-            if (isset($create_user_real)) {
+            if (! is_null($create_user_real)) {
                 if (!$GLOBALS['dbi']->tryQuery($create_user_real)) {
                     $_error = true;
                 }
@@ -4294,7 +4304,7 @@ class Privileges
                 $sql_query,
                 $username,
                 $hostname,
-                isset($dbname) ? $dbname : null
+                $dbname
             );
             if (!empty($_REQUEST['userGroup']) && $is_menuwork) {
                 $this->setUserGroup($GLOBALS['username'], $_REQUEST['userGroup']);
@@ -4314,7 +4324,7 @@ class Privileges
             isset($_REQUEST['old_usergroup']) ? $_REQUEST['old_usergroup'] : null;
         $this->setUserGroup($_REQUEST['username'], $old_usergroup);
 
-        if (isset($create_user_real)) {
+        if (is_null($create_user_real)) {
             $queries[] = $create_user_real;
         }
         $queries[] = $real_sql_query;
@@ -4572,7 +4582,7 @@ class Privileges
                     = $table;
         }
 
-        return $this->template->render('privileges/add_user_fieldset', [
+        return $this->template->render('server/privileges/add_user_fieldset', [
             'url_params' => $url_params,
             'rel_params' => $rel_params
         ]);
@@ -4842,6 +4852,8 @@ class Privileges
                         . Util::showMySQLDocu(
                             'privileges-provided',
                             false,
+                            null,
+                            null,
                             'priv_reload'
                         ),
                         Message::NOTICE
@@ -5297,7 +5309,8 @@ class Privileges
                 . $_REQUEST['authentication_plugin'];
         }
 
-        $create_user_real = $create_user_show = $create_user_stmt;
+        $create_user_real = $create_user_stmt;
+        $create_user_show = $create_user_stmt;
 
         $password_set_stmt = 'SET PASSWORD FOR \'%s\'@\'%s\' = \'%s\'';
         $password_set_show = sprintf(
@@ -5425,12 +5438,10 @@ class Privileges
         $real_sql_query .= $with_clause;
         $sql_query .= $with_clause;
 
-        if (isset($create_user_real)) {
-            $create_user_real .= ';';
-            $create_user_show .= ';';
-        }
-        $real_sql_query .= ';';
-        $sql_query .= ';';
+        $create_user_real .= ';';
+        $create_user_show .= ';';
+        $real_sql_query   .= ';';
+        $sql_query        .= ';';
         // No Global GRANT_OPTION privilege
         if (!$GLOBALS['is_grantuser']) {
             $real_sql_query = '';

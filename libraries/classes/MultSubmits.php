@@ -32,11 +32,18 @@ class MultSubmits
     private $transformations;
 
     /**
+     * @var RelationCleanup
+     */
+    private $relationCleanup;
+
+    /**
      * MultSubmits constructor.
      */
     public function __construct()
     {
         $this->transformations = new Transformations();
+        $relation = new Relation($GLOBALS['dbi']);
+        $this->relationCleanup = new RelationCleanup($GLOBALS['dbi'], $relation);
     }
 
     /**
@@ -153,7 +160,7 @@ class MultSubmits
                     break;
 
                 case 'drop_db':
-                    RelationCleanup::database($selected[$i]);
+                    $this->relationCleanup->database($selected[$i]);
                     $aQuery = 'DROP DATABASE '
                            . Util::backquote($selected[$i]);
                     $reload = 1;
@@ -162,7 +169,7 @@ class MultSubmits
                     break;
 
                 case 'drop_tbl':
-                    RelationCleanup::table($db, $selected[$i]);
+                    $this->relationCleanup->table($db, $selected[$i]);
                     $current = $selected[$i];
                     if (!empty($views) && in_array($current, $views)) {
                         $sqlQueryViews .= (empty($sqlQueryViews) ? 'DROP VIEW ' : ', ')
@@ -212,7 +219,7 @@ class MultSubmits
                     break;
 
                 case 'drop_fld':
-                    RelationCleanup::column($db, $table, $selected[$i]);
+                    $this->relationCleanup->column($db, $table, $selected[$i]);
                     $sqlQuery .= (empty($sqlQuery)
                         ? 'ALTER TABLE ' . Util::backquote($table)
                         : ',')
@@ -416,7 +423,7 @@ class MultSubmits
         $html .= '<label for="what_data">' . __('Structure and data') . '</label><br>';
         $html .= '<input type="radio" id ="what_dataonly" value="dataonly" name="what"/>';
         $html .= '<label for="what_dataonly">' . __('Data only') . '</label><br><br>';
-        $html .= '<input type="checkbox" id="checkbox_drop" value="1" name="drop_if_exists"/>';
+        $html .= '<input type="checkbox" id="checkbox_drop" value="true" name="drop_if_exists"/>';
         $html .= '<label for="checkbox_drop">' . __('Add DROP TABLE') . '</label><br>';
         $html .= '<input type="checkbox" id="checkbox_auto_increment_cp" value="1" name="sql_auto_increment"/>';
         $html .= '<label for="checkbox_auto_increment_cp">' . __('Add AUTO INCREMENT value') . '</label><br>';

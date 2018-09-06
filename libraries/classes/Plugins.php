@@ -292,6 +292,7 @@ class Plugins
                 $ret .= '<div class="export_sub_options" id="' . $plugin_name . '_'
                     . $propertyGroup->getName() . '">';
 
+                $text = null;
                 if (method_exists($propertyGroup, 'getText')) {
                     $text = $propertyGroup->getText();
                 }
@@ -320,7 +321,7 @@ class Plugins
                     // each subgroup can have a header, which may also be a form element
                     /** @var OptionsPropertyItem $subgroup_header */
                     $subgroup_header = $propertyItem->getSubgroupHeader();
-                    if (isset($subgroup_header)) {
+                    if (! is_null($subgroup_header)) {
                         $ret .= self::getOneOption(
                             $section,
                             $plugin_name,
@@ -329,7 +330,7 @@ class Plugins
                     }
 
                     $ret .= '<li class="subgroup"><ul';
-                    if (isset($subgroup_header)) {
+                    if (! is_null($subgroup_header)) {
                         $ret .= ' id="ul_' . $subgroup_header->getName() . '">';
                     } else {
                         $ret .= '>';
@@ -370,6 +371,8 @@ class Plugins
                     $ret .= \PhpMyAdmin\Util::showMySQLDocu(
                         $doc[1],
                         false,
+                        null,
+                        null,
                         $doc[2]
                     );
                 } elseif (count($doc) == 1) {
@@ -539,6 +542,8 @@ class Plugins
         // Options for plugins that support them
         foreach ($list as $plugin) {
             $properties = $plugin->getProperties();
+            $text = null;
+            $options = null;
             if ($properties != null) {
                 $text = $properties->getText();
                 $options = $properties->getOptions();
